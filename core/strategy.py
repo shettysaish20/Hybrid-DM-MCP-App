@@ -19,13 +19,13 @@ except ImportError:
 def select_decision_prompt_path(planning_mode: str, exploration_mode: Optional[str] = None) -> str:
     """Selects the appropriate decision prompt file based on planning strategy."""
     if planning_mode == "conservative":
-        return "prompts/decision_prompt_conservative.txt"
+        return r"D:\Projects\TSAI_common\Session_9_Session_27_Assignment\Hybrid-MCP-App\prompts\decision_prompt_conservative.txt"
     elif planning_mode == "exploratory":
         if exploration_mode == "parallel":
-            return "prompts/decision_prompt_exploratory_parallel.txt"
+            return r"D:\Projects\TSAI_common\Session_9_Session_27_Assignment\Hybrid-MCP-App\prompts\decision_prompt_exploratory_parallel.txt"
         elif exploration_mode == "sequential":
-            return "prompts/decision_prompt_exploratory_sequential.txt"
-    return "prompts/decision_prompt_conservative.txt"  # safe fallback
+            return r"D:\Projects\TSAI_common\Session_9_Session_27_Assignment\Hybrid-MCP-App\prompts\decision_prompt_exploratory_sequential.txt"
+    return r"D:\Projects\TSAI_common\Session_9_Session_27_Assignment\Hybrid-MCP-App\prompts\decision_prompt_conservative.txt"  # safe fallback
 
 model = ModelManager()
 

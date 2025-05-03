@@ -21,7 +21,7 @@ except ImportError:
 model = ModelManager()
 
 
-prompt_path = "prompts/perception_prompt.txt"
+prompt_path = r"D:\Projects\TSAI_common\Session_9_Session_27_Assignment\Hybrid-MCP-App\prompts\perception_prompt.txt"
 
 class PerceptionResult(BaseModel):
     intent: str

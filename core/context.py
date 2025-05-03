@@ -20,7 +20,7 @@ class StrategyProfile(BaseModel):
 
 class AgentProfile:
     def __init__(self):
-        with open("config/profiles.yaml", "r") as f:
+        with open(r"D:\Projects\TSAI_common\Session_9_Session_27_Assignment\Hybrid-MCP-App\config\profiles.yaml", "r") as f:
             config = yaml.safe_load(f)
 
         self.name = config["agent"]["name"]

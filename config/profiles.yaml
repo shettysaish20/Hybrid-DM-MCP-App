@@ -16,6 +16,8 @@ memory:
   memory_service: true
   summarize_tool_results: true  # Always store summarized results
   tag_interactions: true        # Get tags from LLM for each interaction
+  use_conversation_history: true # Enable conversation history retrieval
+  max_history_items: 5         # Maximum number of past conversations to retrieve
   storage:
     base_dir: "memory"
     structure: "date"  # Indicates we're using date-based directory structure
@@ -48,10 +50,10 @@ mcp_servers:
     description: "Webtools to search internet for queries and fetch content for a specific web page"
     capabilities: ["duckduckgo_search_results", "download_raw_html_from_url"]
     basic_tools: [duckduckgo_search_results]
-  # - id: memory
-  #   script: modules/mcp_server_memory.py
-  #   cwd: I:/TSAI/2025/EAG/Session 9/S9
-  #   description: "Tools to get Agent-User Conversation History (current session or all historical)"
-  #   capabilities: ["get_current_conversations", "search_historical_conversations"]
-  #   basic_tools: [get_current_conversations, search_historical_conversations]
+  - id: memory
+    script: modules/mcp_server_memory.py
+    cwd: D:\Projects\TSAI_common\Session_9_Session_27_Assignment\Hybrid-MCP-App
+    description: "Tools to get Agent-User Conversation History (current session or all historical)"
+    capabilities: ["get_current_conversations", "search_historical_conversations"]
+    basic_tools: [get_current_conversations, search_historical_conversations]
 

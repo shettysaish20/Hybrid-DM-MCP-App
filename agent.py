@@ -9,6 +9,7 @@ import datetime
 from pathlib import Path
 import json
 import re
+from modules.history_manager import initialize_history_manager
 
 def log(stage: str, msg: str):
     """Simple timestamped console logger."""
@@ -26,6 +27,10 @@ async def main():
 
     multi_mcp = MultiMCP(server_configs=list(mcp_servers.values()))
     await multi_mcp.initialize()
+    
+    # Initialize the history manager with the MCP dispatcher
+    history_manager = initialize_history_manager(multi_mcp)
+    log("agent", "🔍 Conversation history indexing enabled")
 
     try:
         while True:
@@ -84,3 +89,9 @@ if __name__ == "__main__":
 # What is the relationship between Gensol and Go-Auto? Search in local documents and summarize.
 # which course are we teaching on Canvas LMS? "H:\DownloadsH\How to use Canvas LMS.pdf"
 # Summarize this page: https://theschoolof.ai/
+
+# New questions
+# Find the sum of first 10 fibonacchi numbers. 
+# Summarize this link https://www.formula1.com/en/latest/article/the-beginners-guide-to-the-f1-sprint.55yJBEiF7vYkZEwSV9lZJ9
+# What are Tesla's arguments for patent protection? Use local documents and summarize.
+# Summarize this news article for me in 50 words https://www.bbc.com/news/articles/cg72x3dd7ydo

@@ -2,7 +2,6 @@ from mcp.server.fastmcp import FastMCP, Context
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 import yaml
-from memory import MemoryManager  # Import MemoryManager to use its path structure
 import json
 import os
 import sys
@@ -35,13 +34,11 @@ mcp = FastMCP("memory-service")
 class MemoryStore:
     def __init__(self):
         self.memory_dir = BASE_MEMORY_DIR
-        # self.memory_manager = None
         self.current_session = None  # Track current session
         os.makedirs(self.memory_dir, exist_ok=True)
 
     def load_session(self, session_id: str):
         """Load memory manager for a specific session."""
-        # self.memory_manager = MemoryManager(session_id=session_id, memory_dir=self.memory_dir)
         self.current_session = session_id
 
     def _list_all_memories(self) -> List[Dict]:
@@ -49,30 +46,73 @@ class MemoryStore:
         all_memories = []
         base_path = self.memory_dir  # Use the simple memory_dir path
         
-        for year_dir in os.listdir(base_path):
-            year_path = os.path.join(base_path, year_dir)
-            if not os.path.isdir(year_path):
-                continue
-                
-            for month_dir in os.listdir(year_path):
-                month_path = os.path.join(year_path, month_dir)
-                if not os.path.isdir(month_path):
+        try:
+            for year_dir in os.listdir(base_path):
+                year_path = os.path.join(base_path, year_dir)
+                if not os.path.isdir(year_path):
                     continue
                     
-                for day_dir in os.listdir(month_path):
-                    day_path = os.path.join(month_path, day_dir)
-                    if not os.path.isdir(day_path):
+                for month_dir in os.listdir(year_path):
+                    month_path = os.path.join(year_path, month_dir)
+                    if not os.path.isdir(month_path):
                         continue
                         
-                    for file in os.listdir(day_path):
-                        if file.endswith('.json'):
-                            try:
-                                with open(os.path.join(day_path, file), 'r') as f:
-                                    session_memories = json.load(f)
-                                    all_memories.extend(session_memories)  # Extend instead of append
-                            except Exception as e:
-                                print(f"Failed to load {file}: {e}")
+                    for day_dir in os.listdir(month_path):
+                        day_path = os.path.join(month_path, day_dir)
+                        if not os.path.isdir(day_path):
+                            continue
+                        
+                        # Check for session directory
+                        session_dir = os.path.join(day_path, "session")
+                        if os.path.isdir(session_dir):
+                            # Process session directories
+                            for session_id in os.listdir(session_dir):
+                                session_path = os.path.join(session_dir, session_id)
+                                if os.path.isdir(session_path):
+                                    # Process all files in the session directory
+                                    for subdir_or_file in os.listdir(session_path):
+                                        subdir_or_file_path = os.path.join(session_path, subdir_or_file)
+                                        if os.path.isfile(subdir_or_file_path) and subdir_or_file_path.endswith('.json'):
+                                            try:
+                                                with open(subdir_or_file_path, 'r') as f:
+                                                    session_memories = json.load(f)
+                                                    if isinstance(session_memories, list):
+                                                        all_memories.extend(session_memories)
+                                                    elif isinstance(session_memories, dict):
+                                                        all_memories.append(session_memories)
+                                            except Exception as e:
+                                                print(f"Failed to load {subdir_or_file_path}: {e}")
+                                        elif os.path.isdir(subdir_or_file_path):
+                                            # Process any sub-directories if they exist
+                                            for file in os.listdir(subdir_or_file_path):
+                                                file_path = os.path.join(subdir_or_file_path, file)
+                                                if os.path.isfile(file_path) and file_path.endswith('.json'):
+                                                    try:
+                                                        with open(file_path, 'r') as f:
+                                                            session_memories = json.load(f)
+                                                            if isinstance(session_memories, list):
+                                                                all_memories.extend(session_memories)
+                                                            elif isinstance(session_memories, dict):
+                                                                all_memories.append(session_memories)
+                                                    except Exception as e:
+                                                        print(f"Failed to load {file_path}: {e}")
+                        else:
+                            # Process direct JSON files if they exist at the day level
+                            for file in os.listdir(day_path):
+                                if file.endswith('.json'):
+                                    try:
+                                        with open(os.path.join(day_path, file), 'r') as f:
+                                            session_memories = json.load(f)
+                                            if isinstance(session_memories, list):
+                                                all_memories.extend(session_memories)
+                                            elif isinstance(session_memories, dict):
+                                                all_memories.append(session_memories)
+                                    except Exception as e:
+                                        print(f"Failed to load {file}: {e}")
+        except Exception as e:
+            print(f"Error traversing memory directory: {e}")
         
+        print(f"Found {len(all_memories)} memory entries in total")
         return all_memories
 
     def _get_conversation_flow(self, conversation_id: str = None) -> Dict:
@@ -137,35 +177,68 @@ async def get_current_conversations(input: Dict) -> Dict[str, Any]:
         )
         
         if not os.path.exists(day_path):
-            return {"error": "No sessions found for today"}
+            return {"result": {"message": "No sessions found for today"}}
             
-        # Get most recent session file
-        session_files = [f for f in os.listdir(day_path) if f.endswith('.json')]
-        if not session_files:
-            return {"error": "No session files found"}
+        # Check if there's a session directory
+        session_dir = os.path.join(day_path, "session")
+        if os.path.isdir(session_dir):
+            # Get all session directories
+            session_dirs = [d for d in os.listdir(session_dir) if os.path.isdir(os.path.join(session_dir, d))]
+            if not session_dirs:
+                return {"result": {"message": "No session directories found"}}
+                
+            # Get most recent session directory
+            latest_session = sorted(session_dirs)[-1]  
+            session_path = os.path.join(session_dir, latest_session)
             
-        latest_file = sorted(session_files)[-1]  # Get most recent
-        file_path = os.path.join(day_path, latest_file)
-        
-        # Read and return contents
-        with open(file_path, 'r') as f:
-            data = json.load(f)
+            # Find all JSON files in this session directory
+            all_items = []
+            for root, _, files in os.walk(session_path):
+                for file in files:
+                    if file.endswith('.json'):
+                        file_path = os.path.join(root, file)
+                        with open(file_path, 'r') as f:
+                            data = json.load(f)
+                            if isinstance(data, list):
+                                all_items.extend(data)
+                            else:
+                                all_items.append(data)
+                                
+            return {"result": {
+                "session_id": latest_session,
+                "interactions": [
+                    item for item in all_items 
+                    if isinstance(item, dict) and item.get("type") != "run_metadata"
+                ]
+            }}
+        else:
+            # Fallback to direct JSON files
+            session_files = [f for f in os.listdir(day_path) if f.endswith('.json')]
+            if not session_files:
+                return {"result": {"message": "No session files found"}}
+                
+            latest_file = sorted(session_files)[-1]  # Get most recent
+            file_path = os.path.join(day_path, latest_file)
             
-        return {"result": {
-                    "session_id": latest_file.replace(".json", ""),
-                    "interactions": [
-                        item for item in data 
-                        if item.get("type") != "run_metadata"
-                    ]
-                }}
+            # Read and return contents
+            with open(file_path, 'r') as f:
+                data = json.load(f)
+                
+            return {"result": {
+                        "session_id": latest_file.replace(".json", ""),
+                        "interactions": [
+                            item for item in data if isinstance(item, dict) and item.get("type") != "run_metadata"
+                        ]
+                    }}
     except Exception as e:
         print(f"[memory] Error: {str(e)}")  # Debug print
-        return {"error": str(e)}
+        return {"result": {"message": f"Error retrieving conversations: {str(e)}"}}
 
 @mcp.tool()
 async def search_historical_conversations(input: SearchInput) -> Dict[str, Any]:
     """Search conversation memory between user and YOU. Usage: input={"input": {"query": "anmol singh"}} result = await mcp.call_tool('search_historical_conversations', input)"""
     try:
+        print(f"Searching for: '{input.query}'")
         all_memories = memory_store._list_all_memories()
         search_terms = input.query.lower().split()
         
@@ -175,7 +248,8 @@ async def search_historical_conversations(input: SearchInput) -> Dict[str, Any]:
             memory_content = " ".join([
                 str(memory.get("user_query", "")),
                 str(memory.get("final_answer", "")),
-                str(memory.get("intent", ""))
+                str(memory.get("intent", "")),
+                str(memory.get("text", "")),  # Also search in general memory text
             ]).lower()
             
             if all(term in memory_content for term in search_terms):
@@ -184,11 +258,12 @@ async def search_historical_conversations(input: SearchInput) -> Dict[str, Any]:
                     "user_query": memory.get("user_query", ""),
                     "final_answer": memory.get("final_answer", ""),
                     "timestamp": memory.get("timestamp", ""),
-                    "intent": memory.get("intent", "")
+                    "intent": memory.get("intent", ""),
+                    "text": memory.get("text", "")
                 })
 
-        # Sort by timestamp (most recent last)
-        matches.sort(key=lambda x: x.get("timestamp", ""), reverse=False)
+        # Sort by timestamp (most recent first)
+        matches.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
         
         # Count total words in matches
         total_words = 0
@@ -198,7 +273,8 @@ async def search_historical_conversations(input: SearchInput) -> Dict[str, Any]:
         for match in matches:
             match_text = " ".join([
                 str(match.get("user_query", "")),
-                str(match.get("final_answer", ""))
+                str(match.get("final_answer", "")),
+                str(match.get("text", ""))
             ])
             words_in_match = len(match_text.split())
             
@@ -208,12 +284,20 @@ async def search_historical_conversations(input: SearchInput) -> Dict[str, Any]:
             else:
                 break
         
+        # Make the output more readable with a summary
+        summary = {
+            "total_matches": len(matches),
+            "matches_returned": len(filtered_matches),
+            "total_words": total_words
+        }
+        
         return {"result": {
-                    "status": "error",
-                    "message": str(e)
-                }}
+            "summary": summary,
+            "matches": filtered_matches
+        }}
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        print(f"[memory] Search error: {str(e)}")
+        return {"result": {"message": f"Error searching conversations: {str(e)}", "matches": []}}
 
 if __name__ == "__main__":
     print("Memory MCP server starting...")

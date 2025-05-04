@@ -96,7 +96,7 @@ class AgentLoop:
                                 f"FINAL_ANSWER: your answer\n\n"
                                 f"Otherwise, return the next FUNCTION_CALL."
                             )
-                            log("loop", f"📨 Forwarding intermediate result to next step:\n{self.context.user_input_override}\n\n")
+                            # log("loop", f"📨 Forwarding intermediate result to next step:\n{self.context.user_input_override}\n\n")
                             log("loop", f"🔁 Continuing based on FURTHER_PROCESSING_REQUIRED — Step {step+1} continues...")
                             break  # Step will continue
                         elif result.startswith("[sandbox error:"):

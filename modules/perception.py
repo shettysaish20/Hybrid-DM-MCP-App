@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from modules.model_manager import ModelManager
 from modules.tools import load_prompt, extract_json_block
 from core.context import AgentContext
-
+import heuristics  # Import the heuristics module
 import json
 
 
@@ -34,6 +34,13 @@ async def extract_perception(user_input: str, mcp_server_descriptions: dict) -> 
     """
     Extracts perception details and selects relevant MCP servers based on the user query.
     """
+    # Validate user input using heuristics
+    is_valid, error_messages, validated_input = heuristics.validate_llm_input(user_input)
+    if not is_valid:
+        log("perception", f"Input validation issues: {error_messages}")
+        # Continue with the validated/sanitized input
+        user_input = validated_input
+    
     # log("perception", f"User input: {user_input}")
     server_list = []
     for server_id, server_info in mcp_server_descriptions.items():
@@ -52,7 +59,8 @@ async def extract_perception(user_input: str, mcp_server_descriptions: dict) -> 
     
 
     try:
-        raw = await model.generate_text(prompt)
+        # Pass expected format to generate_text for output validation
+        raw = await model.generate_text(prompt, expected_format="perception")
         raw = raw.strip()
         log("perception", f"Raw output: {raw}")
 

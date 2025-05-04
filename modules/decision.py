@@ -3,6 +3,7 @@ from modules.perception import PerceptionResult
 from modules.memory import MemoryItem
 from modules.model_manager import ModelManager
 from modules.tools import load_prompt
+import heuristics  # Import the heuristics module
 import re
 
 # Optional logging fallback
@@ -31,6 +32,13 @@ async def generate_plan(
 
     """Generates the full solve() function plan for the agent."""
 
+    # Validate user input using heuristics
+    is_valid, error_messages, validated_input = heuristics.validate_llm_input(user_input)
+    if not is_valid:
+        log("plan", f"Input validation issues: {error_messages}")
+        # Continue with the validated/sanitized input
+        user_input = validated_input
+
     memory_texts = "\n".join(f"- {m.text}" for m in memory_items) or "None"
     
     #log("plan", f"Memory items:\n{memory_texts}")
@@ -38,16 +46,18 @@ async def generate_plan(
     prompt_template = load_prompt(prompt_path)
 
     prompt = prompt_template.format(
+        # memory_texts=memory_texts,
         tool_descriptions=tool_descriptions,
         user_input=user_input
     )
     
-    # log("plan", f"Prompt for LLM:\n{prompt}")
+    log("plan", f"Prompt for LLM:\n{prompt}")
 
 
     try:
-        raw = (await model.generate_text(prompt)).strip()
-        log("plan", f"LLM output: {raw}")
+        # Pass expected format (though "plan" might not have a specific JSON structure)
+        raw = (await model.generate_text(prompt, expected_format="plan")).strip()
+        # log("plan", f"LLM output: {raw}")
 
         # If fenced in ```python ... ```, extract
         if raw.startswith("```"):

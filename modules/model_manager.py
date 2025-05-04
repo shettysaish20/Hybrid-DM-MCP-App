@@ -2,9 +2,11 @@ import os
 import json
 import yaml
 import requests
+import logging
 from pathlib import Path
 from google import genai
 from dotenv import load_dotenv
+import heuristics  # Import the heuristics module
 
 load_dotenv()
 
@@ -26,14 +28,33 @@ class ModelManager:
             api_key = os.getenv("GEMINI_API_KEY")
             self.client = genai.Client(api_key=api_key)
 
-    async def generate_text(self, prompt: str) -> str:
+    async def generate_text(self, prompt: str, expected_format: str = None) -> str:
+        # Apply input validation and sanitization
+        is_valid, error_messages, validated_prompt = heuristics.validate_llm_input(prompt)
+        if not is_valid:
+            logging.warning(f"Input validation issues: {error_messages}")
+        
+        # Generate response using the validated prompt
         if self.model_type == "gemini":
-            return self._gemini_generate(prompt)
-
+            response = self._gemini_generate(validated_prompt)
         elif self.model_type == "ollama":
-            return self._ollama_generate(prompt)
-
-        raise NotImplementedError(f"Unsupported model type: {self.model_type}")
+            response = self._ollama_generate(validated_prompt)
+        else:
+            raise NotImplementedError(f"Unsupported model type: {self.model_type}")
+        
+        # Apply output validation and sanitization
+        is_valid, error_messages, validated_response = heuristics.validate_llm_output(response, expected_format)
+        if not is_valid:
+            logging.warning(f"Output validation issues: {error_messages}")
+            
+        # If the response was successfully parsed as a dict/object, convert it back to string
+        if isinstance(validated_response, dict):
+            try:
+                return json.dumps(validated_response, indent=2)
+            except:
+                pass
+                
+        return validated_response
 
     def _gemini_generate(self, prompt: str) -> str:
         response = self.client.models.generate_content(

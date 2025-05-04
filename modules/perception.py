@@ -34,7 +34,7 @@ async def extract_perception(user_input: str, mcp_server_descriptions: dict) -> 
     """
     Extracts perception details and selects relevant MCP servers based on the user query.
     """
-
+    # log("perception", f"User input: {user_input}")
     server_list = []
     for server_id, server_info in mcp_server_descriptions.items():
         description = server_info.get("description", "No description available")

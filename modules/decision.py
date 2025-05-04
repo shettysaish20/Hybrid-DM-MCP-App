@@ -32,6 +32,8 @@ async def generate_plan(
     """Generates the full solve() function plan for the agent."""
 
     memory_texts = "\n".join(f"- {m.text}" for m in memory_items) or "None"
+    
+    #log("plan", f"Memory items:\n{memory_texts}")
 
     prompt_template = load_prompt(prompt_path)
 
@@ -39,6 +41,8 @@ async def generate_plan(
         tool_descriptions=tool_descriptions,
         user_input=user_input
     )
+    
+    # log("plan", f"Prompt for LLM:\n{prompt}")
 
 
     try:
